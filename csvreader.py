@@ -29,6 +29,18 @@ class CSVReader(object):
                 
                 *_format - the formats to parse datetime.datetime, datetime.date
                            and datetime.time values with.
+    
+    One way of using this efficiently is to first load all the rows into a list,
+    and then filtering with lambdas:
+    
+        >>> import csvreader.CSVReader as CSVReader
+        >>> import math
+        >>> all_rows = CSVReader('data/stockholm_timmedel.csv', delimiter=';', header=True)
+        >>> all_rows = list(all_rows)
+        >>> mondays = filter(lambda r: r.datum.weekday() == 0 and not math.isnan(r.timmedel), all_rows)
+    
+    Keep in mind to save the original dataset, so that there aren't too much disk
+    activity; it's slow if the csv file is large.
     """
     def __init__(self, filename, delimiter=',', header=True,
                  date_format='%Y-%m-%d', time_format='%H:%M:%S',
