@@ -39,8 +39,8 @@ class CSVReader(object):
         >>> all_rows = list(all_rows)
         >>> mondays = filter(lambda r: r.datum.weekday() == 0 and not math.isnan(r.timmedel), all_rows)
     
-    Keep in mind to save the original dataset, so that there aren't too much disk
-    activity; it's slow if the csv file is large.
+    Keep in mind to save the original dataset in memory, so that there isn't
+    too much disk activity; it's slow if the csv file is large.
     """
     def __init__(self, filename, delimiter=',', header=True,
                  date_format='%Y-%m-%d', time_format='%H:%M:%S',
