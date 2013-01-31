@@ -84,6 +84,10 @@ class CSVReader(object):
     def converter(self, value):
         #test: datetime, date, time, float/int
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        value = value.replace('"' , '')
+>>>>>>> origin/bevin
 =======
         value = value.replace('"' , '')
 >>>>>>> origin/bevin
