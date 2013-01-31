@@ -83,6 +83,7 @@ class CSVReader(object):
     
     def converter(self, value):
         #test: datetime, date, time, float/int
+        value = value.replace('"' , '')
         try:
             conv = datetime.datetime.strptime(value, self.datetime_format)
             return conv
