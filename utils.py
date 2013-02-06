@@ -1,9 +1,30 @@
-import matplotlib.pyplot as plt
+﻿import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import numpy
 import itertools
 from collections import namedtuple as NT
 import datetime
 
+
+def total_avg(total):
+	total = sorted(total, key=lambda x: x.time)
+	fig, ax = plt.subplots(1)
+	fig.autofmt_xdate()
+	# group by minute of day, do autocounting
+	minutes = collect_total(total, False)
+	x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), minutes.keys())
+	
+	y = []
+	for i in minutes:
+		y.append(minutes[i]/60)
+	
+	ax.plot(x, y)
+	ax.fmt_xdata = mdates.DateFormatter('%H:%M')
+	ax.grid(True, which='major')
+	plt.xlabel(u'Tid')
+	plt.ylabel(u'Effekt i medel')
+	plt.title(u'Effektförbrukning över ett dygn')
+	plt.show()
 
 def intensity(total):
 	total = sorted(total, key=lambda x: x.time)
@@ -12,12 +33,38 @@ def intensity(total):
 	min_ = 0
 	for k in grp:
 		min_ = min(min(grp[k]), min_)
+	fig, ax = plt.subplots(1)
+	fig.autofmt_xdate()
+	
+	average = {}
+	x = []
 	for k in grp:
-		minutes = collect_total(grp[k], None)
+		# group by minute of day, count days manually
+		minutes = collect_total(grp[k], True)
+		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), minutes.keys())
+		
 		y = []
 		for i in minutes:
-			y.append(minutes[i])
-		plt.fill_between(minutes.keys(), y, lw=0, alpha=alpha)
+			y.append(minutes[i]/60)
+		
+		for mk in minutes:
+			if mk not in average:
+				average[mk] = 0.0
+			average[mk] += minutes[mk]/60.0
+		
+		ax.fill_between(x, y, lw=0, alpha=alpha)
+	
+	x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), average.keys())
+	y = []
+	for i in average:
+		y.append(average[i]/len(grp))
+	ax.plot(x,y,'r', lw=0.5)
+	
+	ax.fmt_xdata = mdates.DateFormatter('%H:%M')
+	ax.grid(True, which='major')
+	plt.xlabel(u'Tid')
+	plt.ylabel(u'Medeleffekt i watt')
+	plt.title(u'Intensitetsgraf')
 	plt.show()
 	
 	
@@ -40,7 +87,7 @@ def plot_grouped(data, xkey=lambda x: x, ykey=lambda y: y):
 	#plt.bar(x, y)
 	#plt.show()
 
-def collect_total(total, key):
+def collect_total(total, count_days=False):
 	sort = sorted(total, key=lambda t:t.time)
 	first_day = sort[0]
 	last_day = sort[-1]
@@ -51,11 +98,16 @@ def collect_total(total, key):
 	minutes = {}
 	
 	last = None
+	c = 1
 	for cur in sort:
 		if last:
 			last_minute = last.time.minute + last.time.hour*60
 			cur_minute = cur.time.minute + cur.time.hour*60
 			diff = cur.time-last.time
+			if diff.days >= 5:
+				last = cur
+				c += 1
+				continue
 			if last_minute != cur_minute:
 				remain = 60 - last.time.second
 				if last_minute not in minutes:
@@ -85,7 +137,10 @@ def collect_total(total, key):
 		last = cur
 	
 	for k in minutes:
-		minutes[k] = minutes[k] / days_total
+		if count_days:
+			minutes[k] = minutes[k] / c
+		else:
+			minutes[k] = minutes[k] / days_total
 	
 	return minutes
 	
