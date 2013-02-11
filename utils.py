@@ -87,6 +87,23 @@ def plot_grouped(data, xkey=lambda x: x, ykey=lambda y: y):
 	#plt.bar(x, y)
 	#plt.show()
 
+def groupby(data, xkey=lambda x: x, ykey=lambda y: y):
+	sort = sorted(data, key=xkey)
+	group = itertools.groupby(sort, xkey)
+	grouped = {}
+	for k, g in group:
+		grouped[k] = map(ykey, list(g))
+	
+	x = grouped.keys()
+	y = []
+	for k in grouped.keys():
+		y.append(grouped[k])
+	
+	return grouped
+
+def weighted_mean(data, weight=1):
+	pass
+
 def collect_total(total, count_days=False):
 	sort = sorted(total, key=lambda t:t.time)
 	first_day = sort[0]
