@@ -2,7 +2,92 @@ import datetime
 import utils
 import numpy
 
+weekday_names = {0:'monday', 1:'tuesday', 2:'wednesday',3:'thursday',4:'friday',5:'saturday',6:'sunday'}
 
+
+
+
+
+class Profile(object):
+	def __init__(self, name, group):
+		self.name = name
+		self.group.add_profile(self)
+	
+	def get_data(self):
+		pass
+	
+class ProfileGroup(object):
+	def __init__(self, name):
+		self.name = name
+		self.profiles = {}
+	
+	def add_profile(self, profile):
+		if profile.name not in self.profiles:
+			self.profiles[profile.name] = profile
+
+
+class ProfileManager(object):
+	def __init__(self):
+		self.profiles = {}
+	
+	def add_profile(self, p):
+		if p.name not in self.profiles:
+			self.profiles[p.name] = p
+	
+	def add_group(self, g):
+		for pname in g.profiles:
+			self.add_profile(g.profiles[pname])
+	
+	def calculate(self, query):
+		profiles = map(lambda x: self.profiles[x], query)
+		groups = []
+		weights = {}
+		for p in profiles:
+			# get groups
+			if p.group in groups:
+				raise ValueError("too many profiles of the same type")
+			groups.append(p.group)
+		for g in groups:
+			# get weighting
+			weights[g] = []
+			for m in xrange(1440):
+				weights[g].append([])
+				for p in g.profiles:
+					weights[g][m].append(p.get_data()[m])
+				weights[g][m] = numpy.std(weights[g][m])
+		sums = [0.0 for i in xrange(1440)]
+		for g in weights:
+			for m in xrange(1440):
+				sums[m] += weights[g][m]
+		
+		for g in weights:
+			for m in xrange(1440):
+				weights[g][m] = weighrs[g][m] / sums[m]
+		
+		result = [0.0 for i in xrange(1440)]
+		for p in profiles:
+			for m in xrange(1440):
+				result += p.get_data()[m] * weights[p.group][m]
+		
+		return result
+			
+		
+class DayProfile(Profile):
+	def __init__(self, weekday, group):
+		Profile.__init__(self, weekday_names[weekday], group)
+		self.weekday = weekday
+	
+	def get_data(self):
+		return data
+	
+	def process_data(self, data):
+		day = utils.groupby(data, xkey=lambda x: x.time.weekday() == self.weekday)[self.weekday]
+		day = utils.collect_total(day, True)
+		
+		self.data = day
+
+
+"""
 class ProfileManager(object):
 	def __init__(self):
 		self.profiles = {}
@@ -97,3 +182,4 @@ class WeekdayProfile(Profile):
 			self.data[k] = self.data[k] / counts[k]
 		
 		
+"""

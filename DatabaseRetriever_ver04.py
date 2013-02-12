@@ -132,7 +132,7 @@ class DatabaseRetriever:
         with conn:
             cur=conn.cursor()
             #sql="SELECT * FROM {0} WHERE id='{1}' OR id='{2}'".format(table,str(invIdDict[device]),str(idDict[invIdDict[device]]))
-            sql="SELECT * FROM {0} WHEREtime>'{1}'".format(table,lastTimeTag)
+            sql="SELECT * FROM {0} WHERE time>'{1}'".format(table,lastTimeTag)
             print "Using: "+sql
             cur.execute(sql)
             rows=cur.fetchall()
