@@ -115,15 +115,21 @@ def collect_total(total, count_days=False):
 	minutes = {}
 	
 	last = None
-	c = 1
+	last_gap = None
+	c = 0
+	cur = None # scope
 	for cur in sort:
+		if not last_gap:
+			last_gap = cur
 		if last:
 			last_minute = last.time.minute + last.time.hour*60
 			cur_minute = cur.time.minute + cur.time.hour*60
 			diff = cur.time-last.time
-			if diff.days >= 5:
+			if diff.days >= 1:				
+				c += (last.time-last_gap.time).days + 1
+				#print (last.time-last_gap.time).days + 1
+				last_gap = cur
 				last = cur
-				c += 1
 				continue
 			if last_minute != cur_minute:
 				remain = 60 - last.time.second
@@ -152,6 +158,8 @@ def collect_total(total, count_days=False):
 				
 				
 		last = cur
+	
+	c += (last.time-last_gap.time).days + 1
 	
 	for k in minutes:
 		if count_days:
