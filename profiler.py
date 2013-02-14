@@ -4,17 +4,45 @@ import numpy
 
 weekday_names = {0:'monday', 1:'tuesday', 2:'wednesday',3:'thursday',4:'friday',5:'saturday',6:'sunday'}
 
-
+def make_test1(data):
+	gr = ProfileGroup('weekdays')
+	mo = DayProfile(0, gr)
+	tu = DayProfile(1, gr)
+	we = DayProfile(2, gr)
+	th = DayProfile(3, gr)
+	fr = DayProfile(4, gr)
+	sa = DayProfile(5, gr)
+	su = DayProfile(6, gr)
+	
+	gr.add_profile(mo)
+	gr.add_profile(tu)
+	gr.add_profile(we)
+	gr.add_profile(th)
+	gr.add_profile(fr)
+	gr.add_profile(sa)
+	gr.add_profile(su)
+	
+	for p in gr.profiles:
+		gr.profiles[p].process_data(data)
+	
+	man = ProfileManager()
+	man.add_group(gr)
+	return man
+	
 
 
 
 class Profile(object):
 	def __init__(self, name, group):
 		self.name = name
+		self.group = group
 		self.group.add_profile(self)
 	
 	def get_data(self):
-		pass
+		return self.data
+	
+	def process_data(self, data):
+		self.data = data
 	
 class ProfileGroup(object):
 	def __init__(self, name):
@@ -52,9 +80,10 @@ class ProfileManager(object):
 			weights[g] = []
 			for m in xrange(1440):
 				weights[g].append([])
-				for p in g.profiles:
-					weights[g][m].append(p.get_data()[m])
-				weights[g][m] = numpy.std(weights[g][m])
+				for pkey in g.profiles:
+					profile = g.profiles[pkey]
+					weights[g][m].append(profile.get_data()[m])
+				weights[g][m] = float(numpy.std(weights[g][m]))
 		sums = [0.0 for i in xrange(1440)]
 		for g in weights:
 			for m in xrange(1440):
@@ -62,12 +91,13 @@ class ProfileManager(object):
 		
 		for g in weights:
 			for m in xrange(1440):
-				weights[g][m] = weighrs[g][m] / sums[m]
+				weights[g][m] = weights[g][m] / sums[m]
 		
 		result = [0.0 for i in xrange(1440)]
+
 		for p in profiles:
 			for m in xrange(1440):
-				result += p.get_data()[m] * weights[p.group][m]
+				result[m] += p.get_data()[m] * weights[p.group][m]
 		
 		return result
 			
@@ -78,14 +108,26 @@ class DayProfile(Profile):
 		self.weekday = weekday
 	
 	def get_data(self):
-		return data
+		return self.data
 	
 	def process_data(self, data):
-		day = utils.groupby(data, xkey=lambda x: x.time.weekday() == self.weekday)[self.weekday]
+		# all data is not grouped?
+		day = utils.groupby(data, xkey=lambda x: x.time.weekday())[self.weekday]
 		day = utils.collect_total(day, True)
+		for m in day:
+			day[m] = day[m] # watt i medel
 		
 		self.data = day
 
+
+class TemperatureProfile(Profile):
+	pass # use default profile
+
+class ConditionProfile(Profile):
+	pass # use default profile
+
+class DayTypeProfile(Profile):
+	pass # use default profile
 
 """
 class ProfileManager(object):

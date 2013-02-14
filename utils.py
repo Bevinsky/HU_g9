@@ -45,12 +45,12 @@ def intensity(total):
 		
 		y = []
 		for i in minutes:
-			y.append(minutes[i]/60)
+			y.append(minutes[i])
 		
 		for mk in minutes:
 			if mk not in average:
 				average[mk] = 0.0
-			average[mk] += minutes[mk]/60.0
+			average[mk] += minutes[mk]
 		
 		ax.fill_between(x, y, lw=0, alpha=alpha)
 	
@@ -155,9 +155,9 @@ def collect_total(total, count_days=False):
 	
 	for k in minutes:
 		if count_days:
-			minutes[k] = minutes[k] / c
+			minutes[k] = minutes[k] / c / 60.0
 		else:
-			minutes[k] = minutes[k] / days_total
+			minutes[k] = minutes[k] / days_total / 60.0
 	
 	return minutes
 	
