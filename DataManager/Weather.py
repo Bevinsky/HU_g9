@@ -30,11 +30,14 @@ class Weather():
             self.day_list = pickle.load(newfile)
             newfile.close()
         except IOError:
-            pass
+            raise
             #print "IOEroror"
 
         if start_time is not None and last_time is not None:
-            self.fetchGroup(start_time, last_time)
+            try:
+                self.fetchGroup(start_time, last_time)
+            except IndexError:
+                pass
             try:
                 newfile = open("Weatherdata.pkl", "wb")
                 pickle.dump(self.day_list, newfile)
@@ -87,7 +90,10 @@ class Weather():
         data = subpods[0][1][1]
 
         temp = data[data.find("temperature | ") + 14:data.find("conditions | ")]
-        temp = int(temp[temp.find("average: ") + 9:temp.find(u" °C)")])
+        try:
+            temp = int(temp[temp.find("average: ") + 9:temp.find(u" °C)")])
+        except ValueError:
+            temp = int(temp[:temp.find(u" °C")])
         #print "Temp:", temp
         # -40 - 40 interval with 5 per level
         conditions = data[data.find("conditions | ") + 13:data.find("relative humidity | ")]
@@ -122,7 +128,7 @@ class Weather():
                     date_list.remove(day)
 
         for day in date_list:
-            new = self.fetchDay(day)
+            new = self.collect(day)
             new_days.append(new)
 
         for x in new_days:

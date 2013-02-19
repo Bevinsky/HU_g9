@@ -1,6 +1,9 @@
 import datetime
 import utils
 import numpy
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from collections import namedtuple as NT
 
 weekday_names = {0:'monday', 1:'tuesday', 2:'wednesday',3:'thursday',4:'friday',5:'saturday',6:'sunday'}
 
@@ -23,6 +26,14 @@ def make_test1(data):
 	man = ProfileManager()
 	man.add_group(gr)
 	return man
+
+base_tuple = NT('base', ['time', 'rate'])
+
+def str_to_tuple(val):
+	split = val.split(';')
+	dt = datetime.datetime.strptime(split[0], '%Y-%m-%d %H:%M:%S')
+	v = float(split[1])
+	return base_tuple(dt, v)
 	
 def make(dataman, device, day, temp, cond, daytype):
 	man = ProfileManager()
@@ -39,23 +50,25 @@ def make(dataman, device, day, temp, cond, daytype):
 		days.append(DayProfile(6, daygr))
 		
 		for day in days:
-			day.process_data(dataman.collect_by_day(device, day.weekday))
+			day.process_data(map(str_to_tuple, dataman.collectByWeekday(device, day.weekday)))
 		
 		man.add_group(daygr)
+		print "Added weekday"
 	
 	if temp:
 		tempgr = ProfileGroup('temperature')
 		
 		tp = TemperatureProfile('-100--40', tempgr)
-		tp.process_data(dataman.collect_by_temperature(device, (-100, -40)))
+		tp.process_data(map(str_to_tuple, dataman.collectByTemp(device, (-100, -40))))
 		
 		for v in xrange(-40, 35, 5):
 			tp = TemperatureProfile(str(v) + '-' + str(v+5), tempgr)
-			tp.process_data(dataman.collect_by_temperature(device, (v, v+5)))
+			tp.process_data(map(str_to_tuple, dataman.collectByTemp(device, (v, v+5))))
 		
 		tp = TemperatureProfile('40-100', tempgr)
-		tp.process_data(dataman.collect_by_temperature(device, (40, 100)))
+		tp.process_data(map(str_to_tuple, dataman.collectByTemp(device, (40, 100))))
 		man.add_group(tempgr)
+		print "Added temp"
 	
 	if cond:
 		condgr = ProfileGroup('condition')
@@ -67,17 +80,21 @@ def make(dataman, device, day, temp, cond, daytype):
 		conds.append(ConditionProfile('snow', condgr))
 		
 		for c in conds:
-			conds.process_data(dataman.collect_by_condition(device, [c.name]))
+			conds.process_data(map(str_to_tuple, dataman.collectByConditions(device, [c.name])))
 		
 		man.add_group(condgr)
+		print "Added cond"
 	
 	if daytype:
 		daytypegr = ProfileGroup('daytype')
 		
 		reg = DayTypeProfile('weekday', daytypegr)
+		reg.process_data(map(str_to_tuple, dataman.collectByWorkdays(device)))
 		hol = DayTypeProfile('holiday', daytypegr)
+		hol.process_data(map(str_to_tuple, dataman.collectByHoliday(device)))
 		
 		man.add_group(daytypegr)
+		print "Added daytype"
 		
 	return man
 
@@ -92,7 +109,7 @@ class Profile(object):
 		return self.data
 	
 	def process_data(self, data):
-		data = utils.collect_total(day, True)
+		data = utils.collect_total(data, True)
 		self.data = data
 	
 class ProfileGroup(object):
@@ -151,7 +168,42 @@ class ProfileManager(object):
 				result[m] += p.get_data()[m] * weights[p.group][m]
 		
 		return result
-			
+	
+	def plot(self, query):
+		result = self.calculate(query)
+		
+		fig, ax = plt.subplots(1)
+		fig.autofmt_xdate()
+		# group by minute of day, do autocounting
+		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
+		y = result
+		
+		ax.plot(x, y)
+		ax.fmt_xdata = mdates.DateFormatter('%H:%M')
+		ax.grid(True, which='major')
+		plt.xlabel(u'Tid')
+		plt.title(u' '.join(query))
+		plt.show()
+	def diff(self, q1, q2):
+		res1 = self.calculate(q1)
+		res2 = self.calculate(q2)
+		
+		fig, ax = plt.subplots(1)
+		fig.autofmt_xdate()
+		# group by minute of day, do autocounting
+		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
+		
+		ax.fill_between(x, res1, res2, color='blue', lw=0, alpha=0.6)
+		ax.plot(x, res1, color='red', lw=0.8)
+		ax.plot(x, res2, color='green', lw=0.8)
+		ax.fmt_xdata = mdates.DateFormatter('%H:%M')
+		ax.grid(True, which='major')
+		plt.xlabel(u'Tid')
+		plt.ylabel(u'Energianvändning')
+		t1 = u' '.join(q1) + ' (red)'
+		t2 = u' '.join(q2) + ' (green)'
+		plt.title(t1 + ' and ' + t2)
+		plt.show()
 		
 class DayProfile(Profile):
 	def __init__(self, weekday, group):

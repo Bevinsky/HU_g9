@@ -105,6 +105,11 @@ def weighted_mean(data, weight=1):
 	pass
 
 def collect_total(total, count_days=False):
+	
+	if not total:
+		return dict(((i, 0) for i in xrange(1440)))
+	
+	
 	sort = sorted(total, key=lambda t:t.time)
 	first_day = sort[0]
 	last_day = sort[-1]

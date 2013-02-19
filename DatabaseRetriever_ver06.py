@@ -155,7 +155,7 @@ class Db:
         print "Connected.."
         with conn:
             cur = conn.cursor()
-            sql = "SELECT * FROM {0} WHERE (id='{1}' OR id='{2}') AND time>'{3}'".format(table, str(invIdDict[device]),
+            sql = "SELECT * FROM {0} WHERE (id='{1}' OR id='{2}') AND time>'{3} ORDER BY time'".format(table, str(invIdDict[device]),
                                                                             str(idDict[invIdDict[device]]),
                                                                             self.lastTimeTag)
             #sql="SELECT * FROM {0} WHERE time>'{1}'".format(table,lastTimeTag)

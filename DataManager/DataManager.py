@@ -52,7 +52,7 @@ class DataManager():
 
         date_list = list()
         for day in weather_list:
-            if temp[0] <= day.Temp < temp[1]:
+            if temp[0] <= day.temp < temp[1]:
                 date_list.append(day)
 
         print "Filtering.."
