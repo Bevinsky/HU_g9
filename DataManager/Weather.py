@@ -1,0 +1,160 @@
+# -*- coding:utf-8 -*-
+
+import wap
+from datetime import date
+from datetime import timedelta as td
+import pickle
+
+months = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+    
+dayWeatherList = list()
+
+__APPID__ = "X8JJ7X-8R4Q7GJJ42"
+
+
+class DayWeather():
+    def __init__(self, date='', temp='', conditions='', humidity='', wind=''):
+        self.date = date
+        self.temp = temp
+        self.conditions = conditions
+        self.humidity = humidity
+        self.wind = wind
+
+
+class Weather():
+    def __init__(self, start_time=None, last_time=None):
+        self.day_list = list()
+        try:
+            newfile = open("Weatherdata.pkl", "rb")
+            self.day_list = pickle.load(newfile)
+            newfile.close()
+        except IOError:
+            pass
+            #print "IOEroror"
+
+        if start_time is not None and last_time is not None:
+            self.fetchGroup(start_time, last_time)
+            try:
+                newfile = open("Weatherdata.pkl", "wb")
+                pickle.dump(self.day_list, newfile)
+                newfile.close()
+            except IOError:
+                pass
+                #print "IOEroror"
+
+    def collect(self, date):
+        for day in self.day_list:
+            if date.__str__() == day.date.__str__():
+                return day
+        if date <= date.today():
+            new = self.fetchDay(date)
+        else:
+            new = self.fetchForecast(date)
+        self.day_list.append(new)
+
+        try:
+            newfile = open("Weatherdata.pkl", "wb")
+            pickle.dump(self.day_list, newfile)
+            newfile.close()
+        except IOError:
+            pass
+            #print "IOEroror"
+
+        return new
+
+    def fetchDay(self, date):
+        #print "fetchDay.."
+        client = wap.WolframAlphaEngine(__APPID__, 'http://api.wolframalpha.com/v1/query.jsp')
+        inputQuery = str("weather in stockholm on " + months[date.month - 1] + " " +
+                         str(date.day) + ", " + str(date.year))
+        print "Using query: " + inputQuery
+        q = wap.WolframAlphaQuery(inputQuery, __APPID__)
+        q.ScanTimeout = '3.0'
+        q.Async = False
+        q.ToURL()
+        try:
+            result = client.PerformQuery(q.Query)
+        except IndexError:
+            print "Index Error at PerformQuery, will try again.."
+            return self.fetchDay(date)
+        qresult = wap.WolframAlphaQueryResult(result)
+        #print qresult
+        pod = qresult.Pods()[1]
+        #print pod
+        np = wap.Pod(pod)
+        subpods = np.Subpods()
+        data = subpods[0][1][1]
+
+        temp = data[data.find("temperature | ") + 14:data.find("conditions | ")]
+        temp = int(temp[temp.find("average: ") + 9:temp.find(u" °C)")])
+        #print "Temp:", temp
+        # -40 - 40 interval with 5 per level
+        conditions = data[data.find("conditions | ") + 13:data.find("relative humidity | ")]
+        conditions = conditions[conditions.find("Cond: ") + 6:].split(" ")
+        # some are to be regarded as same
+        #print "Cond:", conditions
+        humidity = data[data.find("relative humidity | ") + 20:data.find("wind speed | ")]
+        #print "Humidity:", humidity
+        wind = data[data.find("wind speed | ") + 13:]
+        #print "Wind", wind
+
+        return DayWeather(date, temp, conditions, humidity, wind)
+
+    def fetchGroup(self, startTime, stopTime):
+        if type(startTime) is not  date and type(stopTime) is not date:
+            raise ValueError("Starttime and stoptime is not date-objects")
+
+        delta = stopTime - startTime
+        date_list = list()
+        for i in range(delta.days + 1):
+            day = startTime + td(days=i)
+            date_list.append(day)
+
+        new_days = list()
+        #print date_list
+        for day in date_list:
+            #print "date_list:" + day.__str__()
+            for x in self.day_list:
+                #print "day_list:" + x.date.__str__(), "date_list:" + day.__str__()
+                if x.date.__str__() == day.__str__():
+                    #print "removing:", day
+                    date_list.remove(day)
+
+        for day in date_list:
+            new = self.fetchDay(day)
+            new_days.append(new)
+
+        for x in new_days:
+            self.day_list.append(x)
+        #print self.day_list
+
+        return new_days
+
+    def fetchForecast(self, date):
+        print "fetchForecast.."
+        client = wap.WolframAlphaEngine(__APPID__, 'http://api.wolframalpha.com/v1/query.jsp')
+        inputQuery = str("weather in stockholm on " + months[date.month - 1] + " " +
+                         str(date.day) + ", " + str(date.year))
+        print "Using query: " + inputQuery
+        q = wap.WolframAlphaQuery(inputQuery, __APPID__)
+        q.ScanTimeout = '3.0'
+        q.Async = False
+        q.ToURL()
+
+        result = client.PerformQuery(q.Query)
+        qresult = wap.WolframAlphaQueryResult(result)
+        #print qresult
+        pod = qresult.Pods()[1]
+        #print pod
+        np = wap.Pod(pod)
+        subpods = np.Subpods()
+        data = subpods[0][1][1]
+        temp = int(data[:data.find(u" °C")])
+        conditions = data[data.find(u" °C") + 3:].split("  |  ")
+        return DayWeather(date, temp, conditions, None, None)
+
+if __name__ == "__main__":
+    w = Weather(date(2012, 10, 11), date(2013, 02, 19))
+    #w = w.collect(date(2013, 02, 10))
+    #print w.temp, w.conditions
