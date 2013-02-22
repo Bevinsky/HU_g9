@@ -80,7 +80,7 @@ def make(dataman, device, day, temp, cond, daytype):
 		conds.append(ConditionProfile('snow', condgr))
 		
 		for c in conds:
-			conds.process_data(map(str_to_tuple, dataman.collectByConditions(device, [c.name])))
+			c.process_data(map(str_to_tuple, dataman.collectByConditions(device, [c.name])))
 		
 		man.add_group(condgr)
 		print "Added cond"

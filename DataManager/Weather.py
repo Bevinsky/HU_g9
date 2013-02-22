@@ -114,7 +114,6 @@ class Weather():
         except IndexError:
             print "Index Error at PerformQuery, will try again.."
             return self.fetchDay(date)
-<<<<<<< HEAD
         qresult = wap.WolframAlphaQueryResult(result)
         #print qresult
         pod = qresult.Pods()[1]
@@ -140,8 +139,6 @@ class Weather():
         #print "Wind", wind
 
         return DayWeather(date, temp, conditions, humidity, wind)
-=======
->>>>>>> origin/Kod
 
     def fetchGroup(self, startTime, stopTime):
         if type(startTime) is not  date and type(stopTime) is not date:
