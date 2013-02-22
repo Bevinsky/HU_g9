@@ -1,5 +1,11 @@
 # -*- coding:utf-8 -*-
+"""
+Will collect weather from wolframalpha. can do 7 day advance forecast
+When initiating Weather class, you can choose to fetch the relevant days.
+Once the data for a day is downloaded is will not need to be again even if program i closed.
+always use collect for single day, not fetchday, since it will perform checks
 
+"""
 import wap
 from datetime import date
 from datetime import timedelta as td
@@ -49,8 +55,10 @@ class Weather():
                 return day
         if date <= date.today():
             new = self.fetchDay(date)
-        else:
+        elif (date - date.today()).days <= 7:
             new = self.fetchForecast(date)
+        else:
+            raise ValueError("Can't forecast more than 7 days in advance")
         self.day_list.append(new)
 
         try:
@@ -75,31 +83,34 @@ class Weather():
         q.ToURL()
         try:
             result = client.PerformQuery(q.Query)
+            qresult = wap.WolframAlphaQueryResult(result)
+            #print qresult
+            pod = qresult.Pods()[1]
+            #print pod
+            np = wap.Pod(pod)
+            subpods = np.Subpods()
+            data = subpods[0][1][1]
+            temp = data[data.find("temperature | ") + 14:data.find("conditions | ")]
+            try:
+                temp = int(temp[temp.find("average: ") + 9:temp.find(u" °C)")])
+            except ValueError:
+                temp = int(temp[:temp.find(u" °C")])
+                #print "Temp:", temp
+            # -40 - 40 interval with 5 per level
+            conditions = data[data.find("conditions | ") + 13:data.find("relative humidity | ")]
+            conditions = conditions[conditions.find("Cond: ") + 6:].split(" ")
+            # some are to be regarded as same
+            #print "Cond:", conditions
+            humidity = data[data.find("relative humidity | ") + 20:data.find("wind speed | ")]
+            #print "Humidity:", humidity
+            wind = data[data.find("wind speed | ") + 13:]
+            #print "Wind", wind
+
+            return DayWeather(date, temp, conditions, humidity, wind)
+
         except IndexError:
             print "Index Error at PerformQuery, will try again.."
             return self.fetchDay(date)
-        qresult = wap.WolframAlphaQueryResult(result)
-        #print qresult
-        pod = qresult.Pods()[1]
-        #print pod
-        np = wap.Pod(pod)
-        subpods = np.Subpods()
-        data = subpods[0][1][1]
-
-        temp = data[data.find("temperature | ") + 14:data.find("conditions | ")]
-        temp = int(temp[temp.find("average: ") + 9:temp.find(u" °C)")])
-        #print "Temp:", temp
-        # -40 - 40 interval with 5 per level
-        conditions = data[data.find("conditions | ") + 13:data.find("relative humidity | ")]
-        conditions = conditions[conditions.find("Cond: ") + 6:].split(" ")
-        # some are to be regarded as same
-        #print "Cond:", conditions
-        humidity = data[data.find("relative humidity | ") + 20:data.find("wind speed | ")]
-        #print "Humidity:", humidity
-        wind = data[data.find("wind speed | ") + 13:]
-        #print "Wind", wind
-
-        return DayWeather(date, temp, conditions, humidity, wind)
 
     def fetchGroup(self, startTime, stopTime):
         if type(startTime) is not  date and type(stopTime) is not date:
@@ -112,22 +123,10 @@ class Weather():
             date_list.append(day)
 
         new_days = list()
-        #print date_list
-        for day in date_list:
-            #print "date_list:" + day.__str__()
-            for x in self.day_list:
-                #print "day_list:" + x.date.__str__(), "date_list:" + day.__str__()
-                if x.date.__str__() == day.__str__():
-                    #print "removing:", day
-                    date_list.remove(day)
 
         for day in date_list:
-            new = self.fetchDay(day)
+            new = self.collect(day)
             new_days.append(new)
-
-        for x in new_days:
-            self.day_list.append(x)
-        #print self.day_list
 
         return new_days
 
@@ -141,20 +140,29 @@ class Weather():
         q.ScanTimeout = '3.0'
         q.Async = False
         q.ToURL()
+        try:
+            result = client.PerformQuery(q.Query)
+            qresult = wap.WolframAlphaQueryResult(result)
+            #print qresult
+            pod = qresult.Pods()[1]
+            #print pod
+            np = wap.Pod(pod)
+            subpods = np.Subpods()
+            data = subpods[0][1][1]
+            if "no forecast available" in data:
+                raise ValueError("No forecast available, even though less than 7 days")
+            try:
+                temp = int(data[:data.find(u" °C")])
+            except ValueError:
+                temp = int(data[data.find("between ") + 8:data.find(u" °C")])
 
-        result = client.PerformQuery(q.Query)
-        qresult = wap.WolframAlphaQueryResult(result)
-        #print qresult
-        pod = qresult.Pods()[1]
-        #print pod
-        np = wap.Pod(pod)
-        subpods = np.Subpods()
-        data = subpods[0][1][1]
-        temp = int(data[:data.find(u" °C")])
-        conditions = data[data.find(u" °C") + 3:].split("  |  ")
-        return DayWeather(date, temp, conditions, None, None)
+            conditions = data[data.find(u" °C") + 3:].split("  |  ")
+            return DayWeather(date, temp, conditions, None, None)
+        except IndexError:
+            print "Index Error at PerformQuery, will try again.."
+            return self.fetchForecast(date)
 
 if __name__ == "__main__":
-    w = Weather(date(2012, 10, 11), date(2013, 02, 19))
-    #w = w.collect(date(2013, 02, 10))
-    #print w.temp, w.conditions
+    w = Weather()
+    c = w.collect(date(2013, 02, 24))
+    print c
