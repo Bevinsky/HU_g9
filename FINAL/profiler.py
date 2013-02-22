@@ -30,13 +30,13 @@ def make_test1(data):
 base_tuple = NT('base', ['time', 'rate'])
 
 def str_to_tuple(val):
-	split = val.split(';')
+	split = val.strip().split(';')
 	dt = datetime.datetime.strptime(split[0], '%Y-%m-%d %H:%M:%S')
 	v = float(split[1])
 	return base_tuple(dt, v)
 	
 def make(dataman, device, day, temp, cond, daytype):
-	man = ProfileManager()
+	man = ProfileManager(dataman, device)
 	if day:
 		daygr = ProfileGroup('weekday')
 		
@@ -123,8 +123,10 @@ class ProfileGroup(object):
 
 
 class ProfileManager(object):
-	def __init__(self):
+	def __init__(self, dataman, device):
 		self.profiles = {}
+		self.dataman = dataman
+		self.device = device
 	
 	def add_profile(self, p):
 		if p.name not in self.profiles:
@@ -169,6 +171,30 @@ class ProfileManager(object):
 		
 		return result
 	
+	def get_profile_def(self, a_date):
+		weather = self.dataman.weather.collect(a_date)
+		holiday = 'holiday' if self.dataman.holiday.check(a_date) else 'workday'
+		weekday = weekday_names[a_date.weekday()]
+		if weather.temp < -40:
+			temp = '-100--40'
+		elif weather.temp >= 40:
+			temp = '40-100'
+		else:
+			low = weather.temp - weather.temp % 5
+			high = low + 5
+			temp = str(low) + '-' + str(high)
+		
+		for cond in weather.conditions:
+			if 'cloudy' in cond:
+				return [holiday, weekday, temp, 'cloudy']
+			elif 'rain' in cond:
+				return [holiday, weekday, temp, 'rain']
+			elif 'snow' in cond:
+				return [holiday, weekday, temp, 'snow']
+			elif 'clear' in cond:
+				return [holiday, weekday, temp, 'clear']
+		return [holiday, weekday, temp]
+	
 	def plot(self, query):
 		result = self.calculate(query)
 		
@@ -185,7 +211,7 @@ class ProfileManager(object):
 		plt.ylabel(u'Energianvändning')
 		plt.title(u' '.join(query))
 		plt.show()
-	def diff(self, q1, q2):
+	def diff_profiles(self, q1, q2):
 		res1 = self.calculate(q1)
 		res2 = self.calculate(q2)
 		
@@ -203,6 +229,33 @@ class ProfileManager(object):
 		plt.ylabel(u'Energianvändning')
 		t1 = u' '.join(q1) + ' (red)'
 		t2 = u' '.join(q2) + ' (green)'
+		plt.title(t1 + ' and ' + t2)
+		plt.show()
+	def diff_actual(self, date):
+		if date >= datetime.date.today():
+			raise ValueError('invalid date')
+		prof_def = self.get_profile_def(date)
+		prof_res = self.calculate(prof_def)
+		date_res = self.dataman.collectByDate(self.device, date)
+		date_res = utils.collect_total(map(str_to_tuple, date_res), True)
+		date_res = [(0 if i not in date_res else date_res[i]) for i in range(1440)]
+		
+		fig, ax = plt.subplots(1)
+		fig.autofmt_xdate()
+		# group by minute of day, do autocounting
+		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
+		
+		ax.fill_between(x, prof_res, date_res, color='blue', lw=0, alpha=0.6)
+		ax.plot(x, prof_res, color='red', lw=0.8)
+		ax.plot(x, date_res, color='green', lw=0.8)
+		ax.plot(x, [numpy.mean(prof_res)]*1440, color='red', lw=1)
+		ax.plot(x, [numpy.mean(date_res)]*1440, color='green', lw=1)
+		ax.fmt_xdata = mdates.DateFormatter('%H:%M')
+		ax.grid(True, which='major')
+		plt.xlabel(u'Tid')
+		plt.ylabel(u'Energianvändning')
+		t1 = u' '.join(prof_def) + ' (red)'
+		t2 = str(date) + u' (green)'
 		plt.title(t1 + ' and ' + t2)
 		plt.show()
 		

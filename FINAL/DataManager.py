@@ -27,7 +27,11 @@ class DataManager():
         self.weather = Weather.Weather(start, finish)
         self.holiday = Holidays.Holiday()
         self.db = DatabaseRetriever_ver06.Db()
-
+    def collectByDate(self, device, date):
+        data_list = self.db.collect("mysql315.loopia.se", "kthstud@a68445", "2013IIstud!#", "aktivahuset_com", "meterevents", device, True)
+        print "Filtering.."
+        data_list = filter(lambda data: data[:data.find(" ")] in date.__str__(), data_list)
+        return data_list
     def collectByConditions(self, device, conditions):
         data_list = self.db.collect("mysql315.loopia.se", "kthstud@a68445", "2013IIstud!#", "aktivahuset_com",
                                    "meterevents", device, True)

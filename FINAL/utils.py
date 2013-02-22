@@ -4,7 +4,7 @@ import numpy
 import itertools
 from collections import namedtuple as NT
 import datetime
-
+import scipy
 
 def total_avg(total):
 	total = sorted(total, key=lambda x: x.time)
@@ -25,6 +25,13 @@ def total_avg(total):
 	plt.ylabel(u'Effekt i medel')
 	plt.title(u'Effektförbrukning över ett dygn')
 	plt.show()
+
+def mean_confidence_interval(data, confidence=0.95):
+	a = 1.0*numpy.array(data)
+	n = len(a)
+	m, se = numpy.mean(a), scipy.stats.stderr(a)
+	h = se * scipy.stats.t._ppf((1+confidence)/2., n-1)
+	return m, h
 
 def intensity(total):
 	total = sorted(total, key=lambda x: x.time)
@@ -123,6 +130,7 @@ def collect_total(total, count_days=False):
 	last_gap = None
 	c = 0
 	cur = None # scope
+	temp_minute = 0
 	for cur in sort:
 		if not last_gap:
 			last_gap = cur
@@ -138,28 +146,30 @@ def collect_total(total, count_days=False):
 				continue
 			if last_minute != cur_minute:
 				remain = 60 - last.time.second
+				temp_minute += remain*last.rate
 				if last_minute not in minutes:
-					minutes[last_minute] = 0.0
-				minutes[last_minute] += remain*last.rate
+					minutes[last_minute] = []
+				minutes[last_minute].append(temp_minute/60.0)
+				temp_minute = 0
 				diff -= datetime.timedelta(0, remain)
 				while diff.seconds >= 60:
 					last_minute += 1
 					if last_minute >= 1440:
 						last_minute = 0
 					if last_minute not in minutes:
-						minutes[last_minute] = 0.0
-					minutes[last_minute] += 60*last.rate
+						minutes[last_minute] = []
+					minutes[last_minute].append(last.rate)
 					diff -= datetime.timedelta(0, 60)
 				last_minute += 1
 				if last_minute >= 1440:
 					last_minute = 0
 				if last_minute not in minutes:
-					minutes[last_minute] = 0.0
-				minutes[last_minute] += diff.seconds*last.rate
+					minutes[last_minute] = []
+				temp_minute += diff.seconds*last.rate
 			else:
 				if last_minute not in minutes:
-					minutes[last_minute] = 0.0
-				minutes[last_minute] += diff.seconds*last.rate
+					minutes[last_minute] = []
+				temp_minute += diff.seconds*last.rate
 				
 				
 		last = cur
@@ -167,26 +177,10 @@ def collect_total(total, count_days=False):
 	c += (last.time-last_gap.time).days + 1
 	
 	for k in minutes:
-		if count_days:
-			minutes[k] = minutes[k] / c / 60.0
-		else:
-			minutes[k] = minutes[k] / days_total / 60.0
+		conf_int = mean_confidence_interval(minutes[k])
+		minutes[k] = (conf_int[0], conf_int[1])
 	
 	return minutes
-	
-	
-	last = None
-	for i in sort:
-		if last != None:
-			en = (i.time-last.time).seconds * last.rate
-			weighted.append(nt(last.time, en))
-		last = i
-	
-	group = itertools.groupby(weighted, key)
-	grouped = {}
-	for k, g in group:
-		grouped[k] = list(g)
-	return grouped
 
 def plot(x, y, xlab, ylab, tit, bar):
 	plt.xlabel(xlab)
