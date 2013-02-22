@@ -1,4 +1,4 @@
-import datetime
+﻿import datetime
 import utils
 import numpy
 import matplotlib.pyplot as plt
@@ -88,7 +88,7 @@ def make(dataman, device, day, temp, cond, daytype):
 	if daytype:
 		daytypegr = ProfileGroup('daytype')
 		
-		reg = DayTypeProfile('weekday', daytypegr)
+		reg = DayTypeProfile('workday', daytypegr)
 		reg.process_data(map(str_to_tuple, dataman.collectByWorkdays(device)))
 		hol = DayTypeProfile('holiday', daytypegr)
 		hol.process_data(map(str_to_tuple, dataman.collectByHoliday(device)))
@@ -182,6 +182,7 @@ class ProfileManager(object):
 		ax.fmt_xdata = mdates.DateFormatter('%H:%M')
 		ax.grid(True, which='major')
 		plt.xlabel(u'Tid')
+		plt.ylabel(u'Energianvändning')
 		plt.title(u' '.join(query))
 		plt.show()
 	def diff(self, q1, q2):
