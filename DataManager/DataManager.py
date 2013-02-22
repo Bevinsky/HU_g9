@@ -13,6 +13,18 @@ from datetime import timedelta as td
 from multiprocessing import Pool
 
 
+<<<<<<< HEAD
+=======
+class DayWeather():
+    def __init__(self, date='', temp='', conditions='', humidity='', wind=''):
+        self.date = date
+        self.temp = temp
+        self.conditions = conditions
+        self.humidity = humidity
+        self.wind = wind
+
+
+>>>>>>> new datamanager
 class DataManager():
     def __init__(self, start=None, finish=None):
         self.weather = Weather.Weather(start, finish)
@@ -27,6 +39,7 @@ class DataManager():
         last_date = data_list[-1][:data_list[-1].find(" ")].split("-")
         last_date = date(int(last_date[0]), int(last_date[1]), int(last_date[2]))
 
+<<<<<<< HEAD
         weather_list = self.weather.fetchGroup(start_date, last_date)
 
         date_list = list()
@@ -36,6 +49,20 @@ class DataManager():
                 if condition in day.cond:
                     date.append(day)
 
+=======
+        print "Fetching weather data.."
+        weather_list = self.weather.fetchGroup(start_date, last_date)
+
+        date_list = list()
+        for condition in conditions:
+            for day in weather_list:
+                for cond in day.conditions:
+                    if condition in cond:
+                        if day.date.__str__() not in date_list:
+                            date_list.append(day.date.__str__())
+
+        print "Filtering.."
+>>>>>>> new datamanager
         data_list = filter(lambda data: data[:data.find(" ")] in date_list, data_list)
         return data_list
 
@@ -52,12 +79,24 @@ class DataManager():
 
         date_list = list()
         for day in weather_list:
+<<<<<<< HEAD
             if temp[0] <= day.temp < temp[1]:
                 date_list.append(day)
 
         print "Filtering.."
         data_list = filter(lambda data: data[:data.find(" ")] in date_list, data_list)
 
+=======
+            try:
+                if temp[0] <= day.temp < temp[1]:
+                    date_list.append(day.date.__str__())
+            except AttributeError:
+                pass
+
+        print "Filtering.."
+        data_list = filter(lambda data: data[:data.find(" ")] in date_list, data_list)
+        
+>>>>>>> new datamanager
         return data_list
 
     def collectByHoliday(self, device):
@@ -102,7 +141,11 @@ class DataManager():
 
     def collectByWeekday(self, device, weekday):
         data_list = self.db.collect("mysql315.loopia.se", "kthstud@a68445", "2013IIstud!#", "aktivahuset_com",
+<<<<<<< HEAD
                                          "meterevents", device, True)
+=======
+                                        "meterevents", device, True)
+>>>>>>> new datamanager
         start_date = data_list[0][:data_list[0].find(" ")].split("-")
         start_date = date(int(start_date[0]), int(start_date[1]), int(start_date[2]))
         last_date = data_list[-1][:data_list[-1].find(" ")].split("-")
@@ -136,7 +179,11 @@ class DataManager():
                 date_list.append(day.__str__())
 
         def thread(data):
+<<<<<<< HEAD
             new_list=list()
+=======
+            new_list = list()
+>>>>>>> new datamanager
             for x in data:
                 if x[:x.find(" ")] in date_list:
                     new_list.append(x)
@@ -151,8 +198,16 @@ class DataManager():
         return result
 
 if __name__ == '__main__':
+<<<<<<< HEAD
 
     dm = DataManager()
     #hej = dm.collectByWorkdays("Office")
     hej = dm.collectByWeekday("Office", 3)
     print hej
+=======
+    dm = DataManager()
+    hej = dm.collectByConditions("TotalEnergy", ("rain", "snow"))
+    #print hej
+    #hej = dm.collectByWeekday("Office", 3)
+    #print hej
+>>>>>>> new datamanager
