@@ -5,6 +5,7 @@ import itertools
 from collections import namedtuple as NT
 import datetime
 import scipy
+import scipy.stats
 
 def total_avg(total):
 	total = sorted(total, key=lambda x: x.time)
@@ -16,7 +17,7 @@ def total_avg(total):
 	
 	y = []
 	for i in minutes:
-		y.append(minutes[i]/60)
+		y.append(minutes[i][0])
 	
 	ax.plot(x, y)
 	ax.fmt_xdata = mdates.DateFormatter('%H:%M')
@@ -27,10 +28,16 @@ def total_avg(total):
 	plt.show()
 
 def mean_confidence_interval(data, confidence=0.95):
+	if not data:
+		return (0,0)
+	if len(data) == 1:
+		return (data[0], 0)
 	a = 1.0*numpy.array(data)
 	n = len(a)
-	m, se = numpy.mean(a), scipy.stats.stderr(a)
+	m, se = numpy.mean(a), scipy.stats.sem(a)
 	h = se * scipy.stats.t._ppf((1+confidence)/2., n-1)
+	if numpy.isnan(h):
+		print data
 	return m, h
 
 def intensity(total):
@@ -52,12 +59,12 @@ def intensity(total):
 		
 		y = []
 		for i in minutes:
-			y.append(minutes[i])
+			y.append(minutes[i][0])
 		
 		for mk in minutes:
 			if mk not in average:
 				average[mk] = 0.0
-			average[mk] += minutes[mk]
+			average[mk] += minutes[mk][0]
 		
 		ax.fill_between(x, y, lw=0, alpha=alpha)
 	
@@ -114,7 +121,7 @@ def weighted_mean(data, weight=1):
 def collect_total(total, count_days=False):
 	
 	if not total:
-		return dict(((i, 0) for i in xrange(1440)))
+		return dict(((i, (0.0, 0.0)) for i in xrange(1440)))
 	
 	
 	sort = sorted(total, key=lambda t:t.time)
@@ -173,7 +180,7 @@ def collect_total(total, count_days=False):
 				
 				
 		last = cur
-	
+	minutes[last_minute].append(temp_minute/60.0)
 	c += (last.time-last_gap.time).days + 1
 	
 	for k in minutes:

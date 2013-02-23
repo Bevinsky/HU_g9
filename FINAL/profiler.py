@@ -7,25 +7,6 @@ from collections import namedtuple as NT
 
 weekday_names = {0:'monday', 1:'tuesday', 2:'wednesday',3:'thursday',4:'friday',5:'saturday',6:'sunday'}
 
-def make_test1(data):
-	gr = ProfileGroup('weekdays')
-	mo = DayProfile(0, gr)
-	tu = DayProfile(1, gr)
-	we = DayProfile(2, gr)
-	th = DayProfile(3, gr)
-	fr = DayProfile(4, gr)
-	sa = DayProfile(5, gr)
-	su = DayProfile(6, gr)
-	
-	for p in gr.profiles:
-		gr.profiles[p].process_data(data)
-	
-	
-	
-	
-	man = ProfileManager()
-	man.add_group(gr)
-	return man
 
 base_tuple = NT('base', ['time', 'rate'])
 
@@ -152,23 +133,27 @@ class ProfileManager(object):
 				weights[g].append([])
 				for pkey in g.profiles:
 					profile = g.profiles[pkey]
-					weights[g][m].append(profile.get_data()[m])
+					weights[g][m].append(profile.get_data()[m][0])
 				weights[g][m] = float(numpy.std(weights[g][m]))
 		sums = [0.0 for i in xrange(1440)]
 		for g in weights:
 			for m in xrange(1440):
 				sums[m] += weights[g][m]
+				if sums[m] == 0:
+					print m
 		
 		for g in weights:
 			for m in xrange(1440):
 				weights[g][m] = weights[g][m] / sums[m]
 		
-		result = [0.0 for i in xrange(1440)]
+		result = [(0.0, 0.0) for i in xrange(1440)]
 
 		for p in profiles:
 			for m in xrange(1440):
-				result[m] += p.get_data()[m] * weights[p.group][m]
-		
+				data = p.get_data()[m]
+				weight = weights[p.group][m]
+				newtup = (result[m][0] + data[0] * weight, result[m][1] + data[1] * weight)
+				result[m] = newtup
 		return result
 	
 	def get_profile_def(self, a_date):
@@ -195,14 +180,18 @@ class ProfileManager(object):
 				return [holiday, weekday, temp, 'clear']
 		return [holiday, weekday, temp]
 	
-	def plot(self, query):
+	def plot(self, query, conf_int=False):
 		result = self.calculate(query)
 		
 		fig, ax = plt.subplots(1)
 		fig.autofmt_xdate()
 		# group by minute of day, do autocounting
 		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
-		y = result
+		y = map(lambda i: i[0], result)
+		if conf_int:
+			c_low = map(lambda i: i[0] - i[1], result)
+			c_high = map(lambda i: i[0] + i[1], result)
+			ax.fill_between(x, c_low, c_high, alpha=0.5, lw=0, color='yellow')
 		
 		ax.plot(x, y)
 		ax.fmt_xdata = mdates.DateFormatter('%H:%M')
@@ -219,6 +208,8 @@ class ProfileManager(object):
 		fig.autofmt_xdate()
 		# group by minute of day, do autocounting
 		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
+		res1 = map(lambda i: i[0], res1)
+		res2 = map(lambda i: i[0], res2)
 		
 		ax.fill_between(x, res1, res2, color='blue', lw=0, alpha=0.6)
 		ax.plot(x, res1, color='red', lw=0.8)
@@ -231,19 +222,26 @@ class ProfileManager(object):
 		t2 = u' '.join(q2) + ' (green)'
 		plt.title(t1 + ' and ' + t2)
 		plt.show()
-	def diff_actual(self, date):
+	def diff_actual(self, date, conf_int=False):
 		if date >= datetime.date.today():
 			raise ValueError('invalid date')
 		prof_def = self.get_profile_def(date)
 		prof_res = self.calculate(prof_def)
 		date_res = self.dataman.collectByDate(self.device, date)
 		date_res = utils.collect_total(map(str_to_tuple, date_res), True)
-		date_res = [(0 if i not in date_res else date_res[i]) for i in range(1440)]
+		date_res = [((0.0, 0.0) if i not in date_res else date_res[i]) for i in range(1440)]
 		
 		fig, ax = plt.subplots(1)
 		fig.autofmt_xdate()
 		# group by minute of day, do autocounting
 		x = map(lambda i: datetime.datetime(2012, 10, 12, i/60, i%60), range(1440))
+		if conf_int:
+			c_low = map(lambda i: i[0] - i[1], prof_res)
+			c_high = map(lambda i: i[0] + i[1], prof_res)
+			ax.fill_between(x, c_low, c_high, alpha=0.5, lw=0, color='yellow')
+		
+		prof_res = map(lambda i: i[0], prof_res)
+		date_res = map(lambda i: i[0], date_res)
 		
 		ax.fill_between(x, prof_res, date_res, color='blue', lw=0, alpha=0.6)
 		ax.plot(x, prof_res, color='red', lw=0.8)
@@ -263,19 +261,6 @@ class DayProfile(Profile):
 	def __init__(self, weekday, group):
 		Profile.__init__(self, weekday_names[weekday], group)
 		self.weekday = weekday
-	
-	def get_data(self):
-		return self.data
-	
-	def process_data(self, data):
-		# all data is not grouped?
-		day = utils.groupby(data, xkey=lambda x: x.time.weekday())[self.weekday]
-		day = utils.collect_total(day, True)
-		for m in day:
-			day[m] = day[m] # watt i medel
-		
-		self.data = day
-
 
 class TemperatureProfile(Profile):
 	pass # use default profile
