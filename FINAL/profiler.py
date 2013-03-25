@@ -11,12 +11,19 @@ weekday_names = {0:'monday', 1:'tuesday', 2:'wednesday',3:'thursday',4:'friday',
 base_tuple = NT('base', ['time', 'rate'])
 
 def str_to_tuple(val):
+	"""Helper function to convert a DataManager string into a tuple."""
 	split = val.strip().split(';')
 	dt = datetime.datetime.strptime(split[0], '%Y-%m-%d %H:%M:%S')
 	v = float(split[1])
 	return base_tuple(dt, v)
 	
 def make(dataman, device, day, temp, cond, daytype):
+	"""
+	Creates a new ProfileManager, given an existing DataManager and a device.
+	
+	It is also possible to specify what types of data that should be derived
+	from the DataManager.
+	"""
 	man = ProfileManager(dataman, device)
 	if day:
 		daygr = ProfileGroup('weekday')
@@ -42,6 +49,7 @@ def make(dataman, device, day, temp, cond, daytype):
 		tp = TemperatureProfile('-100--40', tempgr)
 		tp.process_data(map(str_to_tuple, dataman.collectByTemp(device, (-100, -40))))
 		
+		# adds all temperatures between -40 and 40 at 5 degree intervals
 		for v in xrange(-40, 35, 5):
 			tp = TemperatureProfile(str(v) + '-' + str(v+5), tempgr)
 			tp.process_data(map(str_to_tuple, dataman.collectByTemp(device, (v, v+5))))
@@ -118,6 +126,15 @@ class ProfileManager(object):
 			self.add_profile(g.profiles[pname])
 	
 	def calculate(self, query):
+		"""
+		Returns a list with the profiled data for a certain profile query.
+		
+		Example:
+		
+		>>> calculate(['monday', 'snow'])
+		
+		This will return data corresponding to a snowy Monday.
+		"""
 		profiles = map(lambda x: self.profiles[x], query)
 		groups = []
 		weights = {}
@@ -157,6 +174,12 @@ class ProfileManager(object):
 		return result
 	
 	def get_profile_def(self, a_date):
+		"""
+		Gets a profile query for a specific date (datetime.date). This profile
+		query can be used in a calculate call.
+		
+		The date can be both a past or future date. 
+		"""
 		weather = self.dataman.weather.collect(a_date)
 		holiday = 'holiday' if self.dataman.holiday.check(a_date) else 'workday'
 		weekday = weekday_names[a_date.weekday()]
@@ -181,6 +204,11 @@ class ProfileManager(object):
 		return [holiday, weekday, temp]
 	
 	def plot(self, query, conf_int=False):
+		"""
+		Plots the result from a calculate call, given a profile query.
+		
+		Plotting the confidence interval is optional.
+		"""
 		result = self.calculate(query)
 		
 		fig, ax = plt.subplots(1)
@@ -201,6 +229,9 @@ class ProfileManager(object):
 		plt.title(u' '.join(query))
 		plt.show()
 	def diff_profiles(self, q1, q2):
+		"""
+		Plots two profiles in the same graph.
+		"""
 		res1 = self.calculate(q1)
 		res2 = self.calculate(q2)
 		
@@ -223,6 +254,12 @@ class ProfileManager(object):
 		plt.title(t1 + ' and ' + t2)
 		plt.show()
 	def diff_actual(self, date, conf_int=False):
+		"""
+		Plots both the actual energy data for a specific date, as well as the
+		profile for that date.
+		
+		This only works for past dates.
+		"""
 		if date >= datetime.date.today():
 			raise ValueError('invalid date')
 		prof_def = self.get_profile_def(date)

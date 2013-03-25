@@ -7,7 +7,12 @@ import datetime
 import scipy
 import scipy.stats
 
+# This module contains helper functions for the profiler system.
+# Many of them are used for specific purposes and are not applicable to most
+# cases. The only function that might be of interest is collect_total.
+
 def total_avg(total):
+	"""Shows a graph of the average energy consumption per day for the given data."""
 	total = sorted(total, key=lambda x: x.time)
 	fig, ax = plt.subplots(1)
 	fig.autofmt_xdate()
@@ -28,6 +33,7 @@ def total_avg(total):
 	plt.show()
 
 def mean_confidence_interval(data, confidence=0.95):
+	"""Returns a confidence interval for the given data."""
 	if not data:
 		return (0,0)
 	if len(data) == 1:
@@ -41,6 +47,7 @@ def mean_confidence_interval(data, confidence=0.95):
 	return m, h
 
 def intensity(total):
+	"""Shows an intensity plot of the given data, grouped by week day."""
 	total = sorted(total, key=lambda x: x.time)
 	grp = plot_grouped(total, lambda x: x.time.weekday())
 	alpha = 1.0/len(grp)
@@ -84,6 +91,8 @@ def intensity(total):
 	
 
 def plot_grouped(data, xkey=lambda x: x, ykey=lambda y: y):
+	"""Groups the dataset by key and returns a new dataset with the specified
+	value mapping set."""
 	sort = sorted(data, key=xkey)
 	group = itertools.groupby(sort, xkey)
 	grouped = {}
@@ -102,6 +111,7 @@ def plot_grouped(data, xkey=lambda x: x, ykey=lambda y: y):
 	#plt.show()
 
 def groupby(data, xkey=lambda x: x, ykey=lambda y: y):
+	"""Does the same as above?"""
 	sort = sorted(data, key=xkey)
 	group = itertools.groupby(sort, xkey)
 	grouped = {}
@@ -119,6 +129,18 @@ def weighted_mean(data, weight=1):
 	pass
 
 def collect_total(total, count_days=False):
+	"""
+	This function is hard to explain. Given a set of data, it will produce
+	a dict containing the average energy usage for each minute of a day. The
+	values of this dict are tuples like `(energy, conf_int)` where `energy` is
+	the energy for that minute, and the `conf_int` is the confidence interval.
+	
+	The function takes a data set with the attributes `rate` and `time`,
+	where `time` is a datetime.datetime object and rate is a number.
+	
+	I'm actually not sure how this function works any more so I'm not going
+	to bother explaining how.
+	"""
 	
 	if not total:
 		return dict(((i, (0.0, 0.0)) for i in xrange(1440)))
@@ -190,6 +212,7 @@ def collect_total(total, count_days=False):
 	return minutes
 
 def plot(x, y, xlab, ylab, tit, bar):
+	"""Plots data."""
 	plt.xlabel(xlab)
 	plt.ylabel(ylab)
 	plt.title(tit)
@@ -200,5 +223,6 @@ def plot(x, y, xlab, ylab, tit, bar):
 	plt.show()
 
 def plot_weekday_avg(data, day):
+	"""This does nothing."""
 	data = data[day]
 	
